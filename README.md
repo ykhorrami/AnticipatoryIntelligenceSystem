@@ -34,6 +34,7 @@ Anticipatory Model Improvements Analysis
 ✅ Detection Power Improvement (AUC-ROC): -25.4%
 
 🎨 Generating charts...
+![screenshot](imageFolder/Results_1.png)
 
 
 =====================================
