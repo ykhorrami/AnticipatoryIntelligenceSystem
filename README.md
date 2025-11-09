@@ -1,13 +1,13 @@
 🚀 Starting Anticipatory Intelligence Model Simulation...
-============================================================
+===================================
 📊 Generating simulated data...
 🔮 Running prediction models...
 ✅ Anticipatory model trained successfully
 📈 Evaluating results...
 
-============================================================
+====================================
 Comparative Results: Anticipatory vs Traditional Model
-============================================================
+====================================
 
 📊 TRADITIONAL Model Performance:
    Precision: 0.5514
@@ -25,9 +25,9 @@ Comparative Results: Anticipatory vs Traditional Model
    Early Detection Rate: 0.0000
    False Positive Rate: 0.0000
 
-============================================================
+=======================================
 Anticipatory Model Improvements Analysis
-============================================================
+=======================================
 ✅ Overall Performance Improvement (F1-Score): -100.0%
 ✅ Early Detection Improvement: -77.0%
 ✅ False Alarm Reduction: +42.7%
@@ -36,11 +36,11 @@ Anticipatory Model Improvements Analysis
 🎨 Generating charts...
 
 
-============================================================
+=====================================
 Model Prediction Samples
-============================================================
+=====================================
 No       Ground Truth Traditional  Anticipatory   Difference
-------------------------------------------------------------
+-------------------------------------
 1        0.101        0.412        0.385             -0.027
 2        0.127        0.104        0.351             +0.248
 3        0.118        0.247        0.346             +0.098
