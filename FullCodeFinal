@@ -1,5 +1,5 @@
 # =============================================================================
-# Advanced Anticipatory Intelligence Model - Calibrated Version
+# Advanced Anticipatory Intelligence Model - Integrated Code (Fixed - English Version)
 # =============================================================================
 
 import numpy as np
@@ -7,9 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, roc_curve
-from scipy import stats
 import seaborn as sns
 
 # Display settings
@@ -17,113 +15,35 @@ plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
 # =============================================================================
-# Model Classes with Advanced Calibration
+# Model Classes
 # =============================================================================
 
 class PredictiveModel:
-    """Advanced Predictive Model with Calibration"""
+    """Advanced Predictive Model"""
     
     def __init__(self):
         self.models = {}
-        self.calibration_factors = {}
         
     def fit_ensemble(self, X_train, y_train):
-        """Train ensemble models with cross-validation"""
+        """Train ensemble models for prediction"""
         try:
             # Random Forest model
-            rf_model = RandomForestRegressor(
-                n_estimators=150, 
-                max_depth=10,
-                min_samples_split=5,
-                random_state=42
-            )
+            rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
             rf_model.fit(X_train, y_train)
             
             # Neural Network model
-            nn_model = MLPRegressor(
-                hidden_layer_sizes=(100, 50, 25),
-                random_state=42, 
-                max_iter=2000,
-                alpha=0.001,
-                learning_rate_init=0.001,
-                early_stopping=True,
-                validation_fraction=0.2
-            )
+            nn_model = MLPRegressor(hidden_layer_sizes=(50, 25), random_state=42, max_iter=1000, 
+                                  alpha=0.001, learning_rate_init=0.001)
             nn_model.fit(X_train, y_train)
             
             self.models = {'random_forest': rf_model, 'neural_network': nn_model}
-            
-            # Calibrate models
-            self._calibrate_models(X_train, y_train)
             return True
         except Exception as e:
             print(f"Model training error: {e}")
             return False
     
-    def _calibrate_models(self, X_train, y_train):
-        """Calibrate model outputs using historical performance"""
-        try:
-            # Use cross-validation to estimate calibration factors
-            n_folds = min(5, len(X_train) // 10)
-            if n_folds < 2:
-                return
-            
-            fold_size = len(X_train) // n_folds
-            calibration_data = []
-            
-            for fold in range(n_folds):
-                start_idx = fold * fold_size
-                end_idx = start_idx + fold_size if fold < n_folds - 1 else len(X_train)
-                
-                val_indices = list(range(start_idx, end_idx))
-                train_indices = [i for i in range(len(X_train)) if i not in val_indices]
-                
-                if len(train_indices) == 0 or len(val_indices) == 0:
-                    continue
-                    
-                X_val_fold = X_train[val_indices]
-                y_val_fold = y_train[val_indices]
-                
-                for name, model in self.models.items():
-                    predictions = model.predict(X_val_fold)
-                    actuals = y_val_fold
-                    calibration_data.append({
-                        'model': name,
-                        'predictions': predictions,
-                        'actuals': actuals
-                    })
-            
-            # Calculate calibration factors
-            for name in self.models.keys():
-                model_data = [d for d in calibration_data if d['model'] == name]
-                if len(model_data) > 0:
-                    all_preds = np.concatenate([d['predictions'] for d in model_data])
-                    all_actuals = np.concatenate([d['actuals'] for d in model_data])
-                    
-                    # Fit linear calibration
-                    if len(all_preds) > 10:
-                        slope, intercept, r_value, p_value, std_err = stats.linregress(all_preds, all_actuals)
-                        self.calibration_factors[name] = {'slope': slope, 'intercept': intercept}
-                    else:
-                        self.calibration_factors[name] = {'slope': 1.0, 'intercept': 0.0}
-                        
-        except Exception as e:
-            print(f"Calibration error: {e}")
-            self.calibration_factors = {
-                'random_forest': {'slope': 1.0, 'intercept': 0.0},
-                'neural_network': {'slope': 1.0, 'intercept': 0.0}
-            }
-    
-    def _apply_calibration(self, predictions, model_name):
-        """Apply calibration to predictions"""
-        if model_name in self.calibration_factors:
-            factors = self.calibration_factors[model_name]
-            calibrated = predictions * factors['slope'] + factors['intercept']
-            return np.clip(calibrated, 0, 1)
-        return predictions
-    
-    def probabilistic_forecast(self, X_current, steps=3):  # Reduced steps for stability
-        """Probabilistic forecasting with advanced calibration"""
+    def probabilistic_forecast(self, X_current, steps=5):
+        """Probabilistic forecasting with confidence intervals"""
         forecasts = {}
         
         for name, model in self.models.items():
@@ -135,283 +55,44 @@ class PredictiveModel:
                     if len(X_temp.shape) == 1:
                         X_temp = X_temp.reshape(1, -1)
                     pred = model.predict(X_temp)[0]
-                    
-                    # Apply calibration
-                    calibrated_pred = self._apply_calibration(np.array([pred]), name)[0]
-                    predictions.append(max(0.05, min(0.95, calibrated_pred)))
-                    
+                    predictions.append(max(0, min(1, pred)))  # Limit to [0,1] range
                     # Update state for next step
-                    X_temp = self.update_state(X_temp, calibrated_pred)
+                    X_temp = self.update_state(X_temp, pred)
                 
                 if len(predictions) > 0:
-                    mean_pred = np.mean(predictions)
-                    std_pred = np.std(predictions)
-                    
-                    # Dynamic confidence adjustment based on prediction stability
-                    confidence_factor = max(0.1, 1.0 - std_pred * 2)
-                    adjusted_mean = mean_pred * confidence_factor
-                    
                     forecasts[name] = {
-                        'mean': adjusted_mean,
-                        'std': std_pred,
-                        'predictions': predictions,
-                        'confidence': confidence_factor
+                        'mean': np.mean(predictions),
+                        'std': np.std(predictions),
+                        'predictions': predictions
                     }
                 else:
                     forecasts[name] = {
                         'mean': 0.3,
                         'std': 0.1,
-                        'predictions': [0.3] * steps,
-                        'confidence': 0.5
+                        'predictions': [0.3] * steps
                     }
             except Exception as e:
                 print(f"Prediction error for {name}: {e}")
                 forecasts[name] = {
                     'mean': 0.3,
                     'std': 0.1,
-                    'predictions': [0.3] * steps,
-                    'confidence': 0.3
+                    'predictions': [0.3] * steps
                 }
         
         return forecasts
     
     def update_state(self, state, prediction):
-        """Update system state with smoothing"""
+        """Update system state"""
         try:
             new_state = np.roll(state, -1)
             if len(new_state.shape) == 1:
-                new_state[-1] = 0.7 * new_state[-1] + 0.3 * prediction  # Smooth transition
+                new_state[-1] = prediction
             else:
-                new_state[0, -1] = 0.7 * new_state[0, -1] + 0.3 * prediction
+                new_state[0, -1] = prediction
             return new_state
         except:
             return state
 
-class AdvancedAnticipatoryModel:
-    """Advanced Anticipatory Model with Dynamic Thresholding"""
-    
-    def __init__(self):
-        self.predictive_model = PredictiveModel()
-        self.dynamic_threshold = 0.5
-        self.is_trained = False
-        self.feature_history = []
-        self.prediction_history = []
-        self.performance_tracker = []
-        
-    def predict_proba(self, data):
-        """Calibrated probabilistic prediction with adaptive thresholds"""
-        
-        try:
-            # Extract anticipatory features
-            features = self.extract_anticipatory_features(data)
-            self.feature_history.append(features)
-            
-            if not self.is_trained and len(data) > 25:
-                self.train_model(data)
-            
-            current_volatility = self._calculate_volatility(data)
-            base_prediction = 0.3  # Conservative base prediction
-            
-            if self.is_trained and len(features) > 0:
-                # Prediction with ensemble model
-                forecasts = self.predictive_model.probabilistic_forecast(features)
-                
-                # Adaptive ensemble weighting based on confidence
-                ensemble_weights = self._calculate_ensemble_weights(forecasts)
-                weighted_predictions = []
-                
-                for name, forecast in forecasts.items():
-                    weight = ensemble_weights.get(name, 0.5)
-                    confidence_adjusted = forecast['mean'] * forecast['confidence']
-                    weighted_predictions.append(confidence_adjusted * weight)
-                
-                if weighted_predictions:
-                    combined_risk = np.sum(weighted_predictions)
-                    
-                    # Apply volatility-based adjustment
-                    volatility_factor = 1.0 + (current_volatility - 0.1) * 0.5
-                    adjusted_risk = combined_risk * volatility_factor
-                    
-                    # Apply historical bias correction
-                    bias_corrected = self._apply_bias_correction(adjusted_risk)
-                    
-                    base_prediction = bias_corrected
-            else:
-                # Fallback strategy
-                if len(features) >= 3:
-                    base_prediction = 0.3 * features[0] + 0.4 * features[3] + 0.3 * features[4]
-            
-            # Final calibration and bounding
-            calibrated_prediction = self._final_calibration(base_prediction, data)
-            self.prediction_history.append(calibrated_prediction)
-            
-            return max(0.05, min(0.95, calibrated_prediction))
-            
-        except Exception as e:
-            print(f"Anticipatory prediction error: {e}")
-            return 0.3
-    
-    def _calculate_volatility(self, data):
-        """Calculate current market volatility"""
-        if len(data) < 10:
-            return 0.1
-        recent_threats = data['threat_level'].tail(10).values
-        return min(0.5, np.std(recent_threats))
-    
-    def _calculate_ensemble_weights(self, forecasts):
-        """Calculate dynamic weights for ensemble models"""
-        weights = {}
-        total_confidence = 0
-        
-        for name, forecast in forecasts.items():
-            confidence = forecast['confidence']
-            weights[name] = confidence
-            total_confidence += confidence
-        
-        if total_confidence > 0:
-            # Normalize weights
-            for name in weights:
-                weights[name] = weights[name] / total_confidence
-        else:
-            # Equal weights fallback
-            for name in forecasts:
-                weights[name] = 1.0 / len(forecasts)
-        
-        return weights
-    
-    def _apply_bias_correction(self, prediction):
-        """Apply bias correction based on historical performance"""
-        if len(self.performance_tracker) < 10:
-            return prediction
-        
-        recent_errors = [abs(actual - pred) for actual, pred in self.performance_tracker[-10:]]
-        avg_error = np.mean(recent_errors) if recent_errors else 0.1
-        
-        # Reduce prediction magnitude based on historical over-estimation
-        if avg_error > 0.15:
-            correction_factor = max(0.7, 1.0 - (avg_error - 0.15) * 2)
-            return prediction * correction_factor
-        
-        return prediction
-    
-    def _final_calibration(self, prediction, data):
-        """Final calibration step"""
-        # Trend-based adjustment
-        if len(data) > 5:
-            recent_trend = data['threat_level'].tail(5).mean()
-            trend_factor = 1.0 + (recent_trend - 0.3) * 0.3
-            prediction *= trend_factor
-        
-        # Contextual adjustment
-        if 'context_1' in data.columns:
-            context_factor = 0.8 + data['context_1'].iloc[-1] * 0.4
-            prediction *= context_factor
-        
-        return prediction
-    
-    def train_model(self, data):
-        """Train predictive model with improved validation"""
-        try:
-            X_train = []
-            y_train = []
-            
-            # Improved training data generation
-            for i in range(10, len(data)-2):
-                features = self.extract_anticipatory_features(data.iloc[:i])
-                if len(features) > 0 and i+2 < len(data):
-                    target = data['threat_level'].iloc[i+1]  # Predict 1 step ahead for better accuracy
-                    X_train.append(features)
-                    y_train.append(target)
-            
-            if len(X_train) > 15:
-                X_train = np.array(X_train)
-                y_train = np.array(y_train)
-                
-                # Remove outliers and invalid values
-                valid_indices = ~(np.isnan(X_train).any(axis=1) | np.isnan(y_train))
-                X_train = X_train[valid_indices]
-                y_train = y_train[valid_indices]
-                
-                if len(X_train) > 10:
-                    success = self.predictive_model.fit_ensemble(X_train, y_train)
-                    if success:
-                        self.is_trained = True
-                        print("✅ Anticipatory model trained successfully with calibration")
-                    else:
-                        print("⚠️ Model training failed")
-                else:
-                    print("⚠️ Insufficient valid training data")
-            else:
-                print("⚠️ Insufficient training samples")
-                
-        except Exception as e:
-            print(f"⚠️ Model training error: {e}")
-    
-    def extract_anticipatory_features(self, data):
-        """Enhanced feature extraction with better normalization"""
-        
-        features = []
-        
-        if len(data) < 5:
-            return np.array([0.1, 0.1, 0.0, 0.2, 0.1])
-        
-        try:
-            threat_series = data['threat_level'].values
-            
-            # 1. Normalized acceleration with smoothing
-            if len(threat_series) > 4:
-                first_deriv = np.gradient(threat_series)
-                second_deriv = np.gradient(first_deriv)
-                accel_feature = np.mean(second_deriv[-3:]) if len(second_deriv) >= 3 else 0.0
-                # Smoother normalization
-                features.append(np.tanh(accel_feature * 5) * 0.5 + 0.5)
-            else:
-                features.append(0.5)
-            
-            # 2. Contextual volatility with bounds
-            if 'context_1' in data.columns:
-                recent_context = data[['context_1', 'context_2', 'context_3']].tail(6).values
-                volatility = np.std(recent_context) if len(recent_context) > 0 else 0.1
-                features.append(min(0.8, volatility * 1.5))
-            else:
-                features.append(0.2)
-            
-            # 3. Smoothed trend analysis
-            if len(threat_series) > 6:
-                x = np.arange(len(threat_series[-6:]))
-                y = threat_series[-6:]
-                trend = np.polyfit(x, y, 1)[0]
-                features.append(np.tanh(trend * 3) * 0.5 + 0.5)  # Centered around 0.5
-            else:
-                features.append(0.5)
-            
-            # 4. Weighted moving average with better weights
-            if len(threat_series) >= 4:
-                weights = np.array([0.1, 0.2, 0.3, 0.4])  # More gradual weighting
-                available_weights = weights[-len(threat_series[-4:]):]
-                normalized_weights = available_weights / np.sum(available_weights)
-                weighted_avg = np.average(threat_series[-4:], weights=normalized_weights)
-                features.append(weighted_avg)
-            else:
-                features.append(np.mean(threat_series) if len(threat_series) > 0 else 0.3)
-            
-            # 5. Bounded standard deviation
-            if len(threat_series) >= 4:
-                threat_std = np.std(threat_series[-4:])
-                features.append(min(0.4, threat_std))
-            else:
-                features.append(0.15)
-            
-            # Ensure no NaN values and proper scaling
-            features = [0.3 if np.isnan(x) else max(0.05, min(0.95, x)) for x in features]
-            
-            return np.array(features)
-            
-        except Exception as e:
-            print(f"Feature extraction error: {e}")
-            return np.array([0.3, 0.2, 0.5, 0.3, 0.15])
-
-# Rest of the classes and functions remain similar but with improved data simulation
 class TraditionalIntelligenceModel:
     """Traditional Intelligence Model (Reactive)"""
     
@@ -430,9 +111,157 @@ class TraditionalIntelligenceModel:
     def predict_proba(self, data):
         """Probabilistic prediction"""
         base_prob = self.predict(data)
-        # Reduced noise for stability
-        noise = np.random.normal(0, 0.03)
+        # Add small noise to simulate uncertainty
+        noise = np.random.normal(0, 0.05)  # Reduced noise for more stability
         return max(0.1, min(0.9, base_prob + noise))
+
+class AdvancedAnticipatoryModel:
+    """Advanced Anticipatory Model"""
+    
+    def __init__(self):
+        self.predictive_model = PredictiveModel()
+        self.risk_threshold = 0.6
+        self.is_trained = False
+        self.feature_history = []
+        
+    def predict_proba(self, data):
+        """Probabilistic prediction considering leading indicators"""
+        
+        try:
+            # Extract anticipatory features
+            features = self.extract_anticipatory_features(data)
+            self.feature_history.append(features)
+            
+            if not self.is_trained and len(data) > 20:  # Reduced minimum data for training
+                self.train_model(data)
+            
+            if self.is_trained and len(features) > 0:
+                # Prediction with ensemble model
+                forecasts = self.predictive_model.probabilistic_forecast(features)
+                
+                # Combine predictions with weighting
+                if 'random_forest' in forecasts and 'neural_network' in forecasts:
+                    rf_pred = forecasts['random_forest']['mean']
+                    nn_pred = forecasts['neural_network']['mean']
+                    
+                    # Weight predictions based on historical accuracy
+                    combined_risk = 0.6 * rf_pred + 0.4 * nn_pred
+                else:
+                    combined_risk = np.mean(features[:3]) if len(features) >= 3 else 0.3
+            else:
+                # Fallback to improved model
+                if len(features) >= 3:
+                    combined_risk = 0.4 * features[0] + 0.3 * features[3] + 0.3 * features[4]
+                else:
+                    combined_risk = 0.3
+            
+            # Apply filter for output smoothing
+            combined_risk = max(0.1, min(0.9, combined_risk))
+            return combined_risk
+            
+        except Exception as e:
+            print(f"Anticipatory prediction error: {e}")
+            return 0.3
+    
+    def train_model(self, data):
+        """Train predictive model"""
+        try:
+            X_train = []
+            y_train = []
+            
+            # Use more data for training
+            for i in range(5, len(data)-3):  # Reduced prediction horizon from 5 to 3
+                features = self.extract_anticipatory_features(data.iloc[:i])
+                if len(features) > 0 and i+3 < len(data):
+                    target = data['threat_level'].iloc[i+2]  # Predict 2 steps ahead
+                    X_train.append(features)
+                    y_train.append(target)
+            
+            if len(X_train) > 10:  # Minimum samples for training
+                X_train = np.array(X_train)
+                y_train = np.array(y_train)
+                
+                # Remove invalid values
+                valid_indices = ~np.isnan(X_train).any(axis=1) & ~np.isnan(y_train)
+                X_train = X_train[valid_indices]
+                y_train = y_train[valid_indices]
+                
+                if len(X_train) > 5:
+                    success = self.predictive_model.fit_ensemble(X_train, y_train)
+                    if success:
+                        self.is_trained = True
+                        print("✅ Anticipatory model trained successfully")
+                    else:
+                        print("⚠️ Model training failed")
+                else:
+                    print("⚠️ Insufficient training data")
+            else:
+                print("⚠️ Insufficient training samples")
+                
+        except Exception as e:
+            print(f"⚠️ Model training error: {e}")
+    
+    def extract_anticipatory_features(self, data):
+        """Extract leading indicators from data"""
+        
+        features = []
+        
+        if len(data) < 3:
+            # Return default features for limited data
+            return np.array([0.2, 0.2, 0.0, 0.3, 0.1])
+        
+        try:
+            # 1. Rate of change acceleration (weak signal)
+            threat_series = data['threat_level'].values
+            if len(threat_series) > 3:
+                first_deriv = np.gradient(threat_series)
+                second_deriv = np.gradient(first_deriv)
+                # Normalization
+                accel_feature = np.mean(second_deriv[-3:]) if len(second_deriv) >= 3 else 0.0
+                features.append(np.tanh(accel_feature * 10))  # Tanh for range limiting
+            else:
+                features.append(0.0)
+            
+            # 2. Abnormal volatility
+            if 'context_1' in data.columns:
+                recent_context = data[['context_1', 'context_2', 'context_3']].tail(5).values
+                volatility = np.std(recent_context) if len(recent_context) > 0 else 0.1
+                features.append(min(1.0, volatility * 2))
+            else:
+                features.append(0.1)
+            
+            # 3. Trend changes
+            if len(threat_series) > 4:
+                x = np.arange(len(threat_series[-4:]))
+                y = threat_series[-4:]
+                trend = np.polyfit(x, y, 1)[0]  # Slope
+                features.append(np.tanh(trend * 5))  # Normalization
+            else:
+                features.append(0.0)
+            
+            # 4. Weighted moving average (emphasis on recent data)
+            if len(threat_series) >= 3:
+                weights = np.array([0.1, 0.3, 0.6])  # More weight to newer data
+                weighted_avg = np.average(threat_series[-3:], weights=weights[-len(threat_series[-3:]):])
+                features.append(weighted_avg)
+            else:
+                features.append(np.mean(threat_series) if len(threat_series) > 0 else 0.3)
+            
+            # 5. Normalized standard deviation
+            if len(threat_series) >= 3:
+                threat_std = np.std(threat_series[-3:])
+                features.append(min(0.5, threat_std))  # Limit standard deviation
+            else:
+                features.append(0.1)
+            
+            # Ensure no NaN values
+            features = [0.1 if np.isnan(x) else x for x in features]
+            
+            return np.array(features)
+            
+        except Exception as e:
+            print(f"Feature extraction error: {e}")
+            return np.array([0.2, 0.2, 0.0, 0.3, 0.1])
 
 class AnticipatoryIntelligenceSystem:
     """Integrated Anticipatory Intelligence System"""
@@ -443,76 +272,199 @@ class AnticipatoryIntelligenceSystem:
         self.performance_history = []
     
     def simulate_data(self, n_steps=200):
-        """Generate more realistic simulated data"""
+        """Generate simulated data"""
         np.random.seed(42)
         
         time_index = pd.date_range('2024-01-01', periods=n_steps, freq='D')
         
-        # More realistic patterns
-        base_pattern = 0.4 + 0.3 * np.sin(2 * np.pi * np.arange(n_steps) / 60)
-        seasonal = 0.2 * np.sin(2 * np.pi * np.arange(n_steps) / 25)
-        noise = 0.1 * np.random.normal(0, 1, n_steps)
+        # Create complex patterns in data
+        base_pattern = np.sin(2 * np.pi * np.arange(n_steps) / 50)
+        seasonal = 0.3 * np.sin(2 * np.pi * np.arange(n_steps) / 20)
+        noise = 0.15 * np.random.normal(0, 1, n_steps)  # Reduced noise
         
-        # Base threat level with more realistic range
-        threat_base = 0.2 + 0.15 * base_pattern + 0.1 * seasonal + 0.08 * noise
+        # Base threat level with complex patterns
+        threat_base = 0.3 + 0.25 * base_pattern + 0.15 * seasonal + 0.1 * noise
         
-        # More realistic threat events
+        # Add random threat events
         threat_events = np.zeros(n_steps)
-        event_indices = np.random.choice(n_steps-10, size=8, replace=False)  # Fewer but longer events
+        event_indices = np.random.choice(n_steps-8, size=12, replace=False)  # Reduced number of events
         for idx in event_indices:
-            duration = np.random.randint(5, 12)
-            intensity = 0.6 + 0.3 * np.random.random()
-            # Gradual onset and offset
-            for i in range(duration):
-                if idx + i < n_steps:
-                    progress = i / duration
-                    if progress < 0.3:  # Onset phase
-                        threat_events[idx + i] = intensity * (progress / 0.3)
-                    elif progress > 0.7:  # Offset phase
-                        threat_events[idx + i] = intensity * ((1 - progress) / 0.3)
-                    else:  # Peak phase
-                        threat_events[idx + i] = intensity
+            duration = np.random.randint(3, 7)
+            intensity = 0.7 + 0.2 * np.random.random()
+            threat_events[idx:idx+duration] = intensity
         
         threat_level = np.clip(threat_base + threat_events, 0, 1)
         
-        # Create more meaningful indicators
+        # Create threat-dependent indicators
         indicators = np.zeros((n_steps, 5))
         for i in range(n_steps):
-            # Indicators correlated with threat level but with some lag/lead
-            base_val = threat_level[i] * 0.6
-            if i > 0:
-                base_val += threat_level[i-1] * 0.3  # Some persistence
-            base_val += np.random.normal(0, 0.15, 5)
+            base_val = threat_level[i] * 0.7 + np.random.normal(0, 0.2, 5)
             indicators[i] = np.clip(base_val, -1, 1)
         
         data = pd.DataFrame({
             'timestamp': time_index,
             'threat_level': threat_level,
             'indicators': list(indicators),
-            'context_1': 0.4 + 0.3 * np.sin(2 * np.pi * np.arange(n_steps) / 35) + 0.1 * np.random.normal(0, 1, n_steps),
-            'context_2': 0.3 + 0.4 * np.cos(2 * np.pi * np.arange(n_steps) / 28) + 0.1 * np.random.normal(0, 1, n_steps),
-            'context_3': 0.5 + 0.2 * np.sin(2 * np.pi * np.arange(n_steps) / 45) + 0.1 * np.random.normal(0, 1, n_steps)
+            'context_1': 0.3 + 0.4 * np.sin(2 * np.pi * np.arange(n_steps) / 30) + 0.1 * np.random.normal(0, 1, n_steps),
+            'context_2': 0.4 + 0.3 * np.cos(2 * np.pi * np.arange(n_steps) / 25) + 0.1 * np.random.normal(0, 1, n_steps),
+            'context_3': 0.5 + 0.2 * np.sin(2 * np.pi * np.arange(n_steps) / 40) + 0.1 * np.random.normal(0, 1, n_steps)
         })
         
         return data
 
-# The evaluation functions and main execution remain similar but will show improved results
+# =============================================================================
+# Evaluation Functions
+# =============================================================================
+
+def calculate_early_detection(actual, predicted, window=5):
+    """Calculate early detection rate"""
+    early_detections = 0
+    total_threats = 0
+    
+    actual_array = actual if isinstance(actual, np.ndarray) else actual.values
+    
+    for i in range(len(predicted)):
+        if i < len(actual_array) and actual_array[i] > 0.7:  # Real threat
+            total_threats += 1
+            # Check if warning was given in previous window
+            for j in range(max(0, i-window), i):
+                if j < len(predicted) and predicted[j] > 0.6:
+                    early_detections += 1
+                    break
+    
+    return early_detections / total_threats if total_threats > 0 else 0
+
+def calculate_false_positive(actual, predicted):
+    """Calculate false positive rate"""
+    actual_binary = (actual > 0.7).astype(int)
+    predicted_binary = (np.array(predicted) > 0.6).astype(int)
+    
+    fp = np.sum((predicted_binary == 1) & (actual_binary == 0))
+    total_negatives = np.sum(actual_binary == 0)
+    
+    return fp / total_negatives if total_negatives > 0 else 0
+
+def evaluate_models(results, actual):
+    """Comprehensive model performance evaluation"""
+    
+    metrics = {}
+    actual_array = actual.values if isinstance(actual, pd.Series) else actual
+    
+    for model_name, predictions in results.items():
+        if model_name == 'actual':
+            continue
+            
+        pred_array = np.array(predictions)
+        actual_subset = actual_array[-len(pred_array):]
+        
+        pred_binary = (pred_array > 0.5).astype(int)
+        actual_binary = (actual_subset > 0.5).astype(int)
+        
+        if len(np.unique(actual_binary)) > 1 and len(np.unique(pred_binary)) > 1:
+            # Calculate metrics
+            precision = precision_score(actual_binary, pred_binary, zero_division=0)
+            recall = recall_score(actual_binary, pred_binary, zero_division=0)
+            f1 = f1_score(actual_binary, pred_binary, zero_division=0)
+            auc_roc = roc_auc_score(actual_binary, pred_array)
+        else:
+            precision = recall = f1 = auc_roc = 0.5
+        
+        metrics[model_name] = {
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1,
+            'auc_roc': auc_roc,
+            'early_detection_rate': calculate_early_detection(actual_subset, pred_array),
+            'false_positive_rate': calculate_false_positive(actual_subset, pred_array)
+        }
+    
+    return metrics
+
+def plot_comparison(results, metrics, data):
+    """Plot comparative charts"""
+    
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Chart 1: Prediction comparison over time
+    time_points = range(len(results['traditional']))
+    actual_values = data['threat_level'].values[-len(results['traditional']):]
+    
+    ax1.plot(time_points, results['traditional'], 'r-', label='Traditional Model', alpha=0.7, linewidth=2)
+    ax1.plot(time_points, results['anticipatory'], 'b-', label='Anticipatory Model', alpha=0.7, linewidth=2)
+    ax1.plot(time_points, actual_values, 'g--', label='Ground Truth', alpha=0.7, linewidth=1)
+    ax1.set_title('Threat Prediction Comparison Over Time', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Threat Level')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    # Chart 2: Performance metrics
+    model_names = list(metrics.keys())
+    performance_metrics = ['precision', 'recall', 'f1_score']
+    
+    x_pos = np.arange(len(model_names))
+    width = 0.25
+    
+    for i, metric in enumerate(performance_metrics):
+        values = [metrics[model][metric] for model in model_names]
+        ax2.bar(x_pos + i*width, values, width, label=metric, alpha=0.8)
+    
+    ax2.set_title('Performance Metrics Comparison', fontsize=14, fontweight='bold')
+    ax2.set_xticks(x_pos + width)
+    ax2.set_xticklabels(model_names)
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    # Chart 3: Early detection vs False alarms
+    early_detection = [metrics[model]['early_detection_rate'] for model in model_names]
+    false_positive = [metrics[model]['false_positive_rate'] for model in model_names]
+    
+    x = np.arange(len(model_names))
+    ax3.bar(x - 0.2, early_detection, 0.4, label='Early Detection', alpha=0.8)
+    ax3.bar(x + 0.2, false_positive, 0.4, label='False Positive', alpha=0.8)
+    ax3.set_title('Early Detection vs False Alarms', fontsize=14, fontweight='bold')
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(model_names)
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+    
+    # Chart 4: ROC curve
+    for model_name in model_names:
+        if model_name in results and len(results[model_name]) > 0:
+            actual_binary = (data['threat_level'].values[-len(results[model_name]):] > 0.5).astype(int)
+            if len(np.unique(actual_binary)) > 1:
+                fpr, tpr, _ = roc_curve(actual_binary, results[model_name])
+                ax4.plot(fpr, tpr, label=f'{model_name} (AUC = {metrics[model_name]["auc_roc"]:.3f})', linewidth=2)
+    
+    ax4.plot([0, 1], [0, 1], 'k--', alpha=0.5)
+    ax4.set_title('ROC Curve', fontsize=14, fontweight='bold')
+    ax4.set_xlabel('False Positive Rate')
+    ax4.set_ylabel('True Positive Rate')
+    ax4.legend()
+    ax4.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    return fig
+
+# =============================================================================
+# Main Execution
+# =============================================================================
 
 def main():
     """Main model execution function"""
     
-    print("🚀 Starting CALIBRATED Anticipatory Intelligence Model Simulation...")
+    print("🚀 Starting Anticipatory Intelligence Model Simulation...")
     print("=" * 60)
     
     # Create system
     system = AnticipatoryIntelligenceSystem()
     
     # Generate data
-    print("📊 Generating realistic simulated data...")
+    print("📊 Generating simulated data...")
     data = system.simulate_data(n_steps=200)
     
     # Run models
-    print("🔮 Running calibrated prediction models...")
+    print("🔮 Running prediction models...")
     
     results = {
         'traditional': [],
@@ -521,7 +473,7 @@ def main():
     }
     
     # Run models on data
-    for i in range(40, len(data)):  # Start from later point for more training data
+    for i in range(30, len(data)):  # Start from earlier point
         train_data = data.iloc[:i]
         
         # Traditional model prediction
@@ -537,12 +489,12 @@ def main():
             print(f"Progress: {i}/{len(data)}")
     
     # Evaluate results
-    print("📈 Evaluating calibrated results...")
+    print("📈 Evaluating results...")
     metrics = evaluate_models(results, data['threat_level'])
     
     # Display results
     print("\n" + "=" * 60)
-    print("CALIBRATED Comparative Results: Anticipatory vs Traditional Model")
+    print("Comparative Results: Anticipatory vs Traditional Model")
     print("=" * 60)
     
     for model_name, model_metrics in metrics.items():
@@ -556,7 +508,7 @@ def main():
     
     # Improvement analysis
     print("\n" + "=" * 60)
-    print("CALIBRATED Model Improvements Analysis")
+    print("Anticipatory Model Improvements Analysis")
     print("=" * 60)
     
     trad_f1 = metrics['traditional']['f1_score']
@@ -569,21 +521,19 @@ def main():
     fp_reduction = (metrics['traditional']['false_positive_rate'] - 
                    metrics['anticipatory']['false_positive_rate']) * 100
     
-    auc_improvement = (metrics['anticipatory']['auc_roc'] - metrics['traditional']['auc_roc']) * 100
-    
     print(f"✅ Overall Performance Improvement (F1-Score): {improvement:+.1f}%")
     print(f"✅ Early Detection Improvement: {early_improvement:+.1f}%")
     print(f"✅ False Alarm Reduction: {fp_reduction:+.1f}%")
-    print(f"✅ Detection Power Improvement (AUC-ROC): {auc_improvement:+.1f}%")
+    print(f"✅ Detection Power Improvement (AUC-ROC): {(metrics['anticipatory']['auc_roc'] - metrics['traditional']['auc_roc'])*100:+.1f}%")
     
     # Plot charts
-    print("\n🎨 Generating calibrated charts...")
+    print("\n🎨 Generating charts...")
     fig = plot_comparison(results, metrics, data)
     plt.show()
     
     # Display prediction samples
     print("\n" + "=" * 60)
-    print("CALIBRATED Model Prediction Samples")
+    print("Model Prediction Samples")
     print("=" * 60)
     
     sample_size = min(10, len(results['traditional']))
