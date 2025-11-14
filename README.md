@@ -1,4 +1,4 @@
-🚀 **Starting Anticipatory Intelligence Model Simulation...**
+🚀 ***Starting Anticipatory Intelligence Model Simulation...***
 
 ==========
 
@@ -95,3 +95,20 @@ Model Prediction Samples
 8    |    0.174   |   0.100    |    0.595      |       +0.495
 9    |    0.212   |   0.117    |    0.600      |       +0.483
 10   |    0.238   |   0.100    |    0.612      |       +0.512
+
+
+=====================================
+=====================================
+🎨 Generating Dashboard...
+
+
+![screenshot](Dash_1.png)
+
+![screenshot](Dash_2.png)
+
+![screenshot](Dash_3.png)
+
+![screenshot](Dash_4.png)
+
+![screenshot](Dash_5.png)
+
