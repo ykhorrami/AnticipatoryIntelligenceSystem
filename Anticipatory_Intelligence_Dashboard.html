@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد هوش پیش‌بینانه پیشرفته</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tahoma', 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .control-panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        .control-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .slider-label {
+            width: 180px;
+            font-size: 0.9rem;
+        }
+        
+        .slider-value {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            margin: 0 10px;
+        }
+        
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            height: 400px;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .metrics-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .metric-title {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        .improvement {
+            color: var(--success-color);
+        }
+        
+        .warning {
+            color: var(--warning-color);
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .results-table th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .results-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .status-message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+        
+        .status-error {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+        
+        .status-info {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>داشبورد هوش پیش‌بینانه پیشرفته</h1>
+            <p class="subtitle">شبیه‌سازی و مقایسه مدل‌های هوش سنتی و پیش‌بینانه</p>
+        </header>
+        
+        <div class="control-panel">
+            <div class="control-section">
+                <div class="control-title">پارامترهای شبیه‌سازی داده</div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">تعداد مراحل زمانی:</span>
+                    <input type="range" id="timeSteps" min="50" max="500" value="200" step="10">
+                    <span class="slider-value" id="timeStepsValue">200</span>
+                </div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">سطح نویز داده:</span>
+                    <input type="range" id="noiseLevel" min="0.05" max="0.3" value="0.15" step="0.01">
+                    <span class="slider-value" id="noiseLevelValue">0.15</span>
+                </div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">تعداد رویدادهای تهدید:</span>
+                    <input type="range" id="threatEvents" min="5" max="20" value="12" step="1">
+                    <span class="slider-value" id="threatEventsValue">12</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <div class="control-title">پارامترهای مدل پیش‌بینانه</div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">آستانه تشخیص تهدید:</span>
+                    <input type="range" id="riskThreshold" min="0.4" max="0.8" value="0.6" step="0.05">
+                    <span class="slider-value" id="riskThresholdValue">0.6</span>
+                </div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">وزن مدل جنگل تصادفی:</span>
+                    <input type="range" id="rfWeight" min="0.1" max="0.9" value="0.6" step="0.1">
+                    <span class="slider-value" id="rfWeightValue">0.6</span>
+                </div>
+                
+                <div class="slider-container">
+                    <span class="slider-label">وزن مدل شبکه عصبی:</span>
+                    <input class="slider-value" id="nnWeightValue" value="0.4" readonly>
+                    <input type="range" id="nnWeight" min="0.1" max="0.9" value="0.4" step="0.1" disabled>
+                    <span class="slider-label">(محاسبه شده)</span>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="runSimulation">اجرای شبیه‌سازی</button>
+                <button id="resetSettings">بازنشانی تنظیمات</button>
+                <button id="exportResults">خروجی نتایج</button>
+            </div>
+        </div>
+        
+        <div id="statusMessage" class="status-message status-info">
+            برای شروع، تنظیمات مورد نظر خود را انتخاب کرده و روی دکمه "اجرای شبیه‌سازی" کلیک کنید.
+        </div>
+        
+        <div class="metrics-panel" id="metricsPanel" style="display: none;">
+            <div class="metric-card">
+                <div class="metric-title">بهبود عملکرد کلی (F1-Score)</div>
+                <div class="metric-value improvement" id="overallImprovement">+0%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">بهبود تشخیص زودهنگام</div>
+                <div class="metric-value improvement" id="earlyDetectionImprovement">+0%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">کاهش هشدارهای کاذب</div>
+                <div class="metric-value improvement" id="falseAlarmReduction">+0%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">بهبود قدرت تشخیص (AUC-ROC)</div>
+                <div class="metric-value improvement" id="detectionPowerImprovement">+0%</div>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <div class="chart-container">
+                <div class="chart-title">مقایسه پیش‌بینی تهدید در طول زمان</div>
+                <canvas id="predictionChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">مقایسه معیارهای عملکرد</div>
+                <canvas id="performanceChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">تشخیص زودهنگام در مقابل هشدارهای کاذب</div>
+                <canvas id="detectionChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">منحنی ROC</div>
+                <canvas id="rocChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="resultsTableContainer" style="display: none;">
+            <h2 style="text-align: center; margin: 20px 0;">نمونه‌ای از پیش‌بینی‌های مدل</h2>
+            <table class="results-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>شماره</th>
+                        <th>مقدار واقعی</th>
+                        <th>مدل سنتی</th>
+                        <th>مدل پیش‌بینانه</th>
+                        <th>تفاوت</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody">
+                    <!-- داده‌های جدول به صورت پویا پر می‌شوند -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // تنظیمات اولیه
+        let simulationData = null;
+        let simulationResults = null;
+        let simulationMetrics = null;
+        
+        // نمودارها
+        let predictionChart = null;
+        let performanceChart = null;
+        let detectionChart = null;
+        let rocChart = null;
+        
+        // تنظیم مقادیر اولیه اسلایدرها
+        document.addEventListener('DOMContentLoaded', function() {
+            // به روزرسانی نمایش مقادیر اسلایدرها
+            updateSliderValues();
+            
+            // تنظیم رویدادها برای اسلایدرها
+            document.getElementById('timeSteps').addEventListener('input', updateSliderValues);
+            document.getElementById('noiseLevel').addEventListener('input', updateSliderValues);
+            document.getElementById('threatEvents').addEventListener('input', updateSliderValues);
+            document.getElementById('riskThreshold').addEventListener('input', updateSliderValues);
+            document.getElementById('rfWeight').addEventListener('input', updateRfWeight);
+            
+            // تنظیم رویدادها برای دکمه‌ها
+            document.getElementById('runSimulation').addEventListener('click', runSimulation);
+            document.getElementById('resetSettings').addEventListener('click', resetSettings);
+            document.getElementById('exportResults').addEventListener('click', exportResults);
+            
+            // مقداردهی اولیه وزن مدل شبکه عصبی
+            updateRfWeight();
+        });
+        
+        function updateSliderValues() {
+            document.getElementById('timeStepsValue').textContent = document.getElementById('timeSteps').value;
+            document.getElementById('noiseLevelValue').textContent = document.getElementById('noiseLevel').value;
+            document.getElementById('threatEventsValue').textContent = document.getElementById('threatEvents').value;
+            document.getElementById('riskThresholdValue').textContent = document.getElementById('riskThreshold').value;
+            document.getElementById('rfWeightValue').textContent = document.getElementById('rfWeight').value;
+        }
+        
+        function updateRfWeight() {
+            const rfWeight = parseFloat(document.getElementById('rfWeight').value);
+            const nnWeight = (1 - rfWeight).toFixed(1);
+            document.getElementById('nnWeightValue').textContent = nnWeight;
+        }
+        
+        function resetSettings() {
+            document.getElementById('timeSteps').value = 200;
+            document.getElementById('noiseLevel').value = 0.15;
+            document.getElementById('threatEvents').value = 12;
+            document.getElementById('riskThreshold').value = 0.6;
+            document.getElementById('rfWeight').value = 0.6;
+            
+            updateSliderValues();
+            updateRfWeight();
+            
+            showStatus('تنظیمات به حالت پیش‌فرض بازنشانی شد.', 'info');
+        }
+        
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = 'status-message';
+            
+            if (type === 'success') {
+                statusElement.classList.add('status-success');
+            } else if (type === 'error') {
+                statusElement.classList.add('status-error');
+            } else {
+                statusElement.classList.add('status-info');
+            }
+        }
+        
+        function runSimulation() {
+            showStatus('در حال اجرای شبیه‌سازی... لطفاً منتظر بمانید.', 'info');
+            
+            // غیرفعال کردن دکمه‌ها در حین اجرا
+            document.getElementById('runSimulation').disabled = true;
+            
+            // شبیه‌سازی با تاخیر برای نمایش وضعیت
+            setTimeout(() => {
+                try {
+                    // اجرای شبیه‌سازی (در اینجا از داده‌های نمونه استفاده می‌کنیم)
+                    simulateDataAndModels();
+                    
+                    // نمایش نتایج
+                    displayResults();
+                    
+                    showStatus('شبیه‌سازی با موفقیت انجام شد!', 'success');
+                } catch (error) {
+                    console.error('خطا در اجرای شبیه‌سازی:', error);
+                    showStatus('خطا در اجرای شبیه‌سازی: ' + error.message, 'error');
+                } finally {
+                    // فعال کردن دکمه‌ها پس از اتمام
+                    document.getElementById('runSimulation').disabled = false;
+                }
+            }, 1000);
+        }
+        
+        function simulateDataAndModels() {
+            // دریافت پارامترهای ورودی
+            const timeSteps = parseInt(document.getElementById('timeSteps').value);
+            const noiseLevel = parseFloat(document.getElementById('noiseLevel').value);
+            const threatEvents = parseInt(document.getElementById('threatEvents').value);
+            const riskThreshold = parseFloat(document.getElementById('riskThreshold').value);
+            const rfWeight = parseFloat(document.getElementById('rfWeight').value);
+            
+            // تولید داده‌های شبیه‌سازی شده
+            simulationData = generateSimulatedData(timeSteps, noiseLevel, threatEvents);
+            
+            // اجرای مدل‌ها
+            simulationResults = runModels(simulationData, riskThreshold, rfWeight);
+            
+            // ارزیابی نتایج
+            simulationMetrics = evaluateModelResults(simulationResults, simulationData);
+        }
+        
+        function generateSimulatedData(nSteps, noiseLevel, nThreatEvents) {
+            // تولید داده‌های شبیه‌سازی شده مشابه کد پایتون
+            const data = {
+                timestamp: [],
+                threat_level: [],
+                indicators: [],
+                context_1: [],
+                context_2: [],
+                context_3: []
+            };
+            
+            // تولید داده‌های پایه
+            for (let i = 0; i < nSteps; i++) {
+                data.timestamp.push(new Date(2024, 0, i + 1));
+                
+                // الگوی پایه با نویز
+                const basePattern = Math.sin(2 * Math.PI * i / 50);
+                const seasonal = 0.3 * Math.sin(2 * Math.PI * i / 20);
+                const noise = noiseLevel * (Math.random() - 0.5) * 2;
+                
+                // سطح تهدید پایه
+                let threatBase = 0.3 + 0.25 * basePattern + 0.15 * seasonal + noise;
+                
+                // افزودن رویدادهای تهدید تصادفی
+                if (i < nSteps - 8 && Math.random() < nThreatEvents / nSteps) {
+                    const duration = Math.floor(Math.random() * 4) + 3; // 3-6
+                    const intensity = 0.7 + 0.2 * Math.random();
+                    
+                    for (let j = 0; j < duration && i + j < nSteps; j++) {
+                        data.threat_level[i + j] = Math.min(1, threatBase + intensity * (1 - j / duration));
+                    }
+                    i += duration - 1;
+                } else {
+                    data.threat_level[i] = Math.max(0, Math.min(1, threatBase));
+                }
+                
+                // تولید شاخص‌ها و زمینه‌ها
+                data.indicators.push([
+                    data.threat_level[i] * 0.7 + (Math.random() - 0.5) * 0.4,
+                    data.threat_level[i] * 0.7 + (Math.random() - 0.5) * 0.4,
+                    data.threat_level[i] * 0.7 + (Math.random() - 0.5) * 0.4,
+                    data.threat_level[i] * 0.7 + (Math.random() - 0.5) * 0.4,
+                    data.threat_level[i] * 0.7 + (Math.random() - 0.5) * 0.4
+                ]);
+                
+                data.context_1.push(0.3 + 0.4 * Math.sin(2 * Math.PI * i / 30) + noiseLevel * (Math.random() - 0.5) * 2);
+                data.context_2.push(0.4 + 0.3 * Math.cos(2 * Math.PI * i / 25) + noiseLevel * (Math.random() - 0.5) * 2);
+                data.context_3.push(0.5 + 0.2 * Math.sin(2 * Math.PI * i / 40) + noiseLevel * (Math.random() - 0.5) * 2);
+            }
+            
+            return data;
+        }
+        
+        function runModels(data, riskThreshold, rfWeight) {
+            const results = {
+                traditional: [],
+                anticipatory: [],
+                actual: data.threat_level.slice(30) // شروع از نقطه 30
+            };
+            
+            const nnWeight = 1 - rfWeight;
+            
+            // اجرای مدل‌ها بر روی داده‌ها
+            for (let i = 30; i < data.threat_level.length; i++) {
+                // مدل سنتی - پیش‌بینی مبتنی بر میانگین تاریخی
+                let tradPred;
+                if (i > 10) {
+                    const recentData = data.threat_level.slice(Math.max(0, i - 10), i);
+                    tradPred = recentData.reduce((sum, val) => sum + val, 0) / recentData.length;
+                } else {
+                    tradPred = 0.3;
+                }
+                
+                // افزودن نویز کوچک
+                tradPred += (Math.random() - 0.5) * 0.1;
+                tradPred = Math.max(0.1, Math.min(0.9, tradPred));
+                results.traditional.push(tradPred);
+                
+                // مدل پیش‌بینانه - ترکیبی از الگوریتم‌ها با در نظر گرفتن شاخص‌های پیش‌بین
+                let antiPred;
+                
+                if (i > 20) {
+                    // استخراج ویژگی‌های پیش‌بین
+                    const features = extractAnticipatoryFeatures(data, i);
+                    
+                    // پیش‌بینی با ترکیب وزنی
+                    const rfPred = 0.4 * features[0] + 0.3 * features[1] + 0.3 * features[2];
+                    const nnPred = 0.3 * features[0] + 0.4 * features[3] + 0.3 * features[4];
+                    
+                    antiPred = rfWeight * rfPred + nnWeight * nnPred;
+                    
+                    // تنظیم بر اساس آستانه ریسک
+                    if (antiPred > riskThreshold) {
+                        antiPred = Math.min(1, antiPred * 1.2);
+                    }
+                } else {
+                    // مدل ساده‌تر برای داده‌های محدود
+                    antiPred = 0.4 * data.threat_level[i-1] + 
+                               0.3 * data.context_1[i] + 
+                               0.3 * data.context_2[i];
+                }
+                
+                antiPred = Math.max(0.1, Math.min(0.9, antiPred));
+                results.anticipatory.push(antiPred);
+            }
+            
+            return results;
+        }
+        
+        function extractAnticipatoryFeatures(data, currentIndex) {
+            const features = [];
+            const threatSeries = data.threat_level.slice(Math.max(0, currentIndex - 10), currentIndex);
+            
+            // 1. شتاب نرخ تغییر (سیگنال ضعیف)
+            if (threatSeries.length > 3) {
+                const firstDeriv = [];
+                for (let i = 1; i < threatSeries.length; i++) {
+                    firstDeriv.push(threatSeries[i] - threatSeries[i-1]);
+                }
+                
+                const secondDeriv = [];
+                for (let i = 1; i < firstDeriv.length; i++) {
+                    secondDeriv.push(firstDeriv[i] - firstDeriv[i-1]);
+                }
+                
+                const recentSecondDeriv = secondDeriv.slice(-3);
+                const accelFeature = recentSecondDeriv.reduce((sum, val) => sum + val, 0) / recentSecondDeriv.length;
+                features.push(Math.tanh(accelFeature * 10));
+            } else {
+                features.push(0.0);
+            }
+            
+            // 2. نوسان غیرعادی
+            const recentContext = [
+                data.context_1[currentIndex-1] || 0.3,
+                data.context_2[currentIndex-1] || 0.4,
+                data.context_3[currentIndex-1] || 0.5
+            ];
+            
+            const meanContext = recentContext.reduce((sum, val) => sum + val, 0) / recentContext.length;
+            const variance = recentContext.reduce((sum, val) => sum + Math.pow(val - meanContext, 2), 0) / recentContext.length;
+            const volatility = Math.sqrt(variance);
+            features.push(Math.min(1.0, volatility * 2));
+            
+            // 3. تغییرات روند
+            if (threatSeries.length > 4) {
+                const recentThreat = threatSeries.slice(-4);
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+                
+                for (let i = 0; i < recentThreat.length; i++) {
+                    sumX += i;
+                    sumY += recentThreat[i];
+                    sumXY += i * recentThreat[i];
+                    sumX2 += i * i;
+                }
+                
+                const n = recentThreat.length;
+                const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+                features.push(Math.tanh(slope * 5));
+            } else {
+                features.push(0.0);
+            }
+            
+            // 4. میانگین متحرک وزنی (تأکید بر داده‌های اخیر)
+            if (threatSeries.length >= 3) {
+                const weights = [0.1, 0.3, 0.6];
+                const recentData = threatSeries.slice(-3);
+                let weightedSum = 0;
+                let weightSum = 0;
+                
+                for (let i = 0; i < recentData.length; i++) {
+                    weightedSum += recentData[i] * weights[i];
+                    weightSum += weights[i];
+                }
+                
+                features.push(weightedSum / weightSum);
+            } else {
+                features.push(threatSeries.reduce((sum, val) => sum + val, 0) / threatSeries.length);
+            }
+            
+            // 5. انحراف استاندارد نرمال‌شده
+            if (threatSeries.length >= 3) {
+                const recentThreat = threatSeries.slice(-3);
+                const mean = recentThreat.reduce((sum, val) => sum + val, 0) / recentThreat.length;
+                const variance = recentThreat.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / recentThreat.length;
+                const stdDev = Math.sqrt(variance);
+                features.push(Math.min(0.5, stdDev));
+            } else {
+                features.push(0.1);
+            }
+            
+            return features;
+        }
+        
+        function evaluateModelResults(results, data) {
+            const metrics = {};
+            const actualArray = results.actual;
+            
+            // ارزیابی مدل سنتی
+            metrics.traditional = calculateMetrics(actualArray, results.traditional);
+            
+            // ارزیابی مدل پیش‌بینانه
+            metrics.anticipatory = calculateMetrics(actualArray, results.anticipatory);
+            
+            return metrics;
+        }
+        
+        function calculateMetrics(actual, predicted) {
+            // تبدیل به مقادیر باینری برای محاسبه معیارها
+            const actualBinary = actual.map(val => val > 0.5 ? 1 : 0);
+            const predictedBinary = predicted.map(val => val > 0.5 ? 1 : 0);
+            
+            // محاسبه TP, FP, TN, FN
+            let tp = 0, fp = 0, tn = 0, fn = 0;
+            
+            for (let i = 0; i < actualBinary.length; i++) {
+                if (actualBinary[i] === 1 && predictedBinary[i] === 1) tp++;
+                else if (actualBinary[i] === 0 && predictedBinary[i] === 1) fp++;
+                else if (actualBinary[i] === 0 && predictedBinary[i] === 0) tn++;
+                else if (actualBinary[i] === 1 && predictedBinary[i] === 0) fn++;
+            }
+            
+            // محاسبه معیارها
+            const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+            const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+            const f1Score = precision + recall > 0 ? 2 * (precision * recall) / (precision + recall) : 0;
+            
+            // نرخ تشخیص زودهنگام (ساده‌شده)
+            let earlyDetections = 0;
+            let totalThreats = 0;
+            
+            for (let i = 0; i < actual.length; i++) {
+                if (actual[i] > 0.7) {
+                    totalThreats++;
+                    
+                    // بررسی هشدار در 5 مرحله قبلی
+                    for (let j = Math.max(0, i - 5); j < i; j++) {
+                        if (predicted[j] > 0.6) {
+                            earlyDetections++;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            const earlyDetectionRate = totalThreats > 0 ? earlyDetections / totalThreats : 0;
+            
+            // نرخ هشدار کاذب
+            const falsePositiveRate = fp + tn > 0 ? fp / (fp + tn) : 0;
+            
+            // AUC-ROC (محاسبه ساده‌شده)
+            const aucRoc = 0.5 + (recall - falsePositiveRate) / 2;
+            
+            return {
+                precision: precision,
+                recall: recall,
+                f1_score: f1Score,
+                auc_roc: Math.max(0, Math.min(1, aucRoc)),
+                early_detection_rate: earlyDetectionRate,
+                false_positive_rate: falsePositiveRate
+            };
+        }
+        
+        function displayResults() {
+            // نمایش پنل معیارها
+            document.getElementById('metricsPanel').style.display = 'grid';
+            
+            // محاسبه و نمایش بهبودها
+            const tradF1 = simulationMetrics.traditional.f1_score;
+            const antiF1 = simulationMetrics.anticipatory.f1_score;
+            const improvement = tradF1 > 0 ? ((antiF1 - tradF1) / tradF1 * 100) : 0;
+            
+            const earlyImprovement = (simulationMetrics.anticipatory.early_detection_rate - 
+                                    simulationMetrics.traditional.early_detection_rate) * 100;
+            
+            const fpReduction = (simulationMetrics.traditional.false_positive_rate - 
+                               simulationMetrics.anticipatory.false_positive_rate) * 100;
+            
+            const detectionPowerImprovement = (simulationMetrics.anticipatory.auc_roc - 
+                                             simulationMetrics.traditional.auc_roc) * 100;
+            
+            document.getElementById('overallImprovement').textContent = `${improvement >= 0 ? '+' : ''}${improvement.toFixed(1)}%`;
+            document.getElementById('earlyDetectionImprovement').textContent = `${earlyImprovement >= 0 ? '+' : ''}${earlyImprovement.toFixed(1)}%`;
+            document.getElementById('falseAlarmReduction').textContent = `${fpReduction >= 0 ? '+' : ''}${fpReduction.toFixed(1)}%`;
+            document.getElementById('detectionPowerImprovement').textContent = `${detectionPowerImprovement >= 0 ? '+' : ''}${detectionPowerImprovement.toFixed(1)}%`;
+            
+            // ایجاد نمودارها
+            createCharts();
+            
+            // پر کردن جدول نتایج
+            fillResultsTable();
+            
+            // نمایش جدول نتایج
+            document.getElementById('resultsTableContainer').style.display = 'block';
+        }
+        
+        function createCharts() {
+            // نمودار مقایسه پیش‌بینی در طول زمان
+            const predictionCtx = document.getElementById('predictionChart').getContext('2d');
+            
+            if (predictionChart) {
+                predictionChart.destroy();
+            }
+            
+            const timePoints = Array.from({length: simulationResults.traditional.length}, (_, i) => i);
+            
+            predictionChart = new Chart(predictionCtx, {
+                type: 'line',
+                data: {
+                    labels: timePoints,
+                    datasets: [
+                        {
+                            label: 'مدل سنتی',
+                            data: simulationResults.traditional,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'مدل پیش‌بینانه',
+                            data: simulationResults.anticipatory,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'مقدار واقعی',
+                            data: simulationResults.actual,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'سطح تهدید'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'زمان'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // نمودار مقایسه معیارهای عملکرد
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            performanceChart = new Chart(performanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['دقت', 'Recall', 'F1-Score'],
+                    datasets: [
+                        {
+                            label: 'مدل سنتی',
+                            data: [
+                                simulationMetrics.traditional.precision,
+                                simulationMetrics.traditional.recall,
+                                simulationMetrics.traditional.f1_score
+                            ],
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                        },
+                        {
+                            label: 'مدل پیش‌بینانه',
+                            data: [
+                                simulationMetrics.anticipatory.precision,
+                                simulationMetrics.anticipatory.recall,
+                                simulationMetrics.anticipatory.f1_score
+                            ],
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'مقدار'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // نمودار تشخیص زودهنگام در مقابل هشدارهای کاذب
+            const detectionCtx = document.getElementById('detectionChart').getContext('2d');
+            
+            if (detectionChart) {
+                detectionChart.destroy();
+            }
+            
+            detectionChart = new Chart(detectionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['مدل سنتی', 'مدل پیش‌بینانه'],
+                    datasets: [
+                        {
+                            label: 'نرخ تشخیص زودهنگام',
+                            data: [
+                                simulationMetrics.traditional.early_detection_rate,
+                                simulationMetrics.anticipatory.early_detection_rate
+                            ],
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)'
+                        },
+                        {
+                            label: 'نرخ هشدار کاذب',
+                            data: [
+                                simulationMetrics.traditional.false_positive_rate,
+                                simulationMetrics.anticipatory.false_positive_rate
+                            ],
+                            backgroundColor: 'rgba(255, 159, 64, 0.7)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'نرخ'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // نمودار منحنی ROC
+            const rocCtx = document.getElementById('rocChart').getContext('2d');
+            
+            if (rocChart) {
+                rocChart.destroy();
+            }
+            
+            // محاسبه نقاط منحنی ROC (ساده‌شده)
+            const rocPoints = 10;
+            const tradFpr = [];
+            const tradTpr = [];
+            const antiFpr = [];
+            const antiTpr = [];
+            
+            for (let i = 0; i <= rocPoints; i++) {
+                const threshold = i / rocPoints;
+                
+                // محاسبه برای مدل سنتی
+                let tradTp = 0, tradFp = 0, tradTn = 0, tradFn = 0;
+                
+                for (let j = 0; j < simulationResults.actual.length; j++) {
+                    const actual = simulationResults.actual[j] > 0.5 ? 1 : 0;
+                    const predicted = simulationResults.traditional[j] > threshold ? 1 : 0;
+                    
+                    if (actual === 1 && predicted === 1) tradTp++;
+                    else if (actual === 0 && predicted === 1) tradFp++;
+                    else if (actual === 0 && predicted === 0) tradTn++;
+                    else if (actual === 1 && predicted === 0) tradFn++;
+                }
+                
+                tradFpr.push(tradFp / (tradFp + tradTn) || 0);
+                tradTpr.push(tradTp / (tradTp + tradFn) || 0);
+                
+                // محاسبه برای مدل پیش‌بینانه
+                let antiTp = 0, antiFp = 0, antiTn = 0, antiFn = 0;
+                
+                for (let j = 0; j < simulationResults.actual.length; j++) {
+                    const actual = simulationResults.actual[j] > 0.5 ? 1 : 0;
+                    const predicted = simulationResults.anticipatory[j] > threshold ? 1 : 0;
+                    
+                    if (actual === 1 && predicted === 1) antiTp++;
+                    else if (actual === 0 && predicted === 1) antiFp++;
+                    else if (actual === 0 && predicted === 0) antiTn++;
+                    else if (actual === 1 && predicted === 0) antiFn++;
+                }
+                
+                antiFpr.push(antiFp / (antiFp + antiTn) || 0);
+                antiTpr.push(antiTp / (antiTp + antiFn) || 0);
+            }
+            
+            rocChart = new Chart(rocCtx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: `مدل سنتی (AUC = ${simulationMetrics.traditional.auc_roc.toFixed(3)})`,
+                            data: tradFpr.map((fpr, i) => ({x: fpr, y: tradTpr[i]})),
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: `مدل پیش‌بینانه (AUC = ${simulationMetrics.anticipatory.auc_roc.toFixed(3)})`,
+                            data: antiFpr.map((fpr, i) => ({x: fpr, y: antiTpr[i]})),
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'خط مبنا',
+                            data: [{x: 0, y: 0}, {x: 1, y: 1}],
+                            borderColor: 'rgb(200, 200, 200)',
+                            backgroundColor: 'rgba(200, 200, 200, 0.1)',
+                            borderDash: [5, 5],
+                            tension: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            min: 0,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'نرخ مثبت کاذب'
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'نرخ مثبت واقعی'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function fillResultsTable() {
+            const tableBody = document.getElementById('resultsTableBody');
+            tableBody.innerHTML = '';
+            
+            const sampleSize = Math.min(10, simulationResults.traditional.length);
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const idx = simulationResults.traditional.length - sampleSize + i;
+                const actualVal = simulationResults.actual[idx];
+                const tradVal = simulationResults.traditional[idx];
+                const antiVal = simulationResults.anticipatory[idx];
+                const diff = antiVal - tradVal;
+                
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${actualVal.toFixed(3)}</td>
+                    <td>${tradVal.toFixed(3)}</td>
+                    <td>${antiVal.toFixed(3)}</td>
+                    <td style="color: ${diff >= 0 ? 'green' : 'red'}">${diff >= 0 ? '+' : ''}${diff.toFixed(3)}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            }
+        }
+        
+        function exportResults() {
+            if (!simulationResults) {
+                showStatus('هیچ داده‌ای برای خروجی‌گیری موجود نیست. لطفاً ابتدا شبیه‌سازی را اجرا کنید.', 'error');
+                return;
+            }
+            
+            // ایجاد داده‌های CSV
+            let csvContent = "شماره,مقدار واقعی,مدل سنتی,مدل پیش‌بینانه,تفاوت\n";
+            
+            for (let i = 0; i < simulationResults.traditional.length; i++) {
+                const actualVal = simulationResults.actual[i];
+                const tradVal = simulationResults.traditional[i];
+                const antiVal = simulationResults.anticipatory[i];
+                const diff = antiVal - tradVal;
+                
+                csvContent += `${i + 1},${actualVal.toFixed(4)},${tradVal.toFixed(4)},${antiVal.toFixed(4)},${diff.toFixed(4)}\n`;
+            }
+            
+            // ایجاد لینک دانلود
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'نتایج_شبیه‌سازی_هوش_پیش‌بینانه.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showStatus('نتایج با موفقیت به صورت فایل CSV ذخیره شد.', 'success');
+        }
+    </script>
+</body>
+</html>
