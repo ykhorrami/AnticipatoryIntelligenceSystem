@@ -108,7 +108,13 @@ Model Prediction Samples
 
 ![screenshot](Dash_3.png)
 
+To see the Dashboard, visit the following site:
+https://ykhorrami.github.io/AnticipatoryIntelligenceSystem/
+
 ![screenshot](Dash_4.png)
 
 ![screenshot](Dash_5.png)
 
+=====================================
+***To see the Dashboard, visit the following website:***
+https://ykhorrami.github.io/AnticipatoryIntelligenceSystem/
