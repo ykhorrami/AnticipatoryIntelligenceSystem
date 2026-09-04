@@ -1,6 +1,10 @@
 🚀 ***Starting Anticipatory Intelligence Model Simulation...***
 
 ==========
+![screenshot](Dash_6.png)
+
+![screenshot](Dash_7.png)
+
 
 📊 Generating simulated data...
 
